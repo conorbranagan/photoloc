@@ -1,67 +1,39 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/rwcarlsen/goexif/exif"
-	"googlemaps.github.io/maps"
 )
-
-var GoogleMapsKey = os.Getenv("GOOGLE_MAPS_API_KEY")
 
 var opts struct {
 	filename string
+	provider string
 }
 
 func main() {
-	flag.StringVar(&opts.filename, "f", "", "full path to file to check exif data")
+	flag.StringVar(&opts.filename, "f", "", "path to image to process")
+	flag.StringVar(&opts.provider, "p", "googlemaps", "choose from: 'google', 'osm'")
 	flag.Parse()
 
 	if opts.filename == "" {
-		fmt.Printf("Missing filename value!")
+		fmt.Printf("Missing filename value!\n")
 		return
 	}
 
-	c, err := maps.NewClient(maps.WithAPIKey(GoogleMapsKey))
+	file, err := os.Open(opts.filename)
 	if err != nil {
-		log.Fatalf("could not initialize maps client: %s", err)
+		log.Fatalf("could not open file: %s", err)
+	}
+	defer file.Close()
+
+	lat, long, err := imageLatLong(file)
+	if err != nil {
+		log.Fatalf("could not get image lat/long from exif: %s", err)
 	}
 
-	locationForImage(c, opts.filename)
-}
-
-func locationForImage(client *maps.Client, filename string) {
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer f.Close()
-
-	x, err := exif.Decode(f)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	lat, long, err := x.LatLong()
-	if err != nil {
-		log.Fatalf("could not get lat/long: %s", err)
-		return
-	}
-	fmt.Printf("%1.8f, %1.8f\n", lat, long)
-
-	results, err := client.ReverseGeocode(context.TODO(), &maps.GeocodingRequest{
-		LatLng: &maps.LatLng{lat, long},
-	})
-	if err != nil {
-		log.Fatalf("error on reverse geocode: %s", err)
-		return
-	}
-
-	for _, r := range results {
-		fmt.Printf("Address: %s\n", r.FormattedAddress)
+	if err := revGeocode(opts.provider, lat, long); err != nil {
+		log.Fatalf("rev geocode err: %s", err)
 	}
 }
