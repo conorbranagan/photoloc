@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	GoogleAPIKey   = os.Getenv("GOOGLE_API_KEY")
-	MapquestAPIKey = os.Getenv("MAPQUEST_API_KEY")
+	googleAPIKey   = os.Getenv("GOOGLE_API_KEY")
+	mapquestAPIKey = os.Getenv("MAPQUEST_API_KEY")
 )
 
 func imageLatLong(f *os.File) (float64, float64, error) {
@@ -27,9 +27,9 @@ func revGeocode(provider string, lat, long float64) error {
 	var geocoder geo.Geocoder
 	switch provider {
 	case "osm":
-		geocoder = nominatim.Geocoder(MapquestAPIKey)
+		geocoder = nominatim.Geocoder(mapquestAPIKey)
 	case "google":
-		geocoder = google.Geocoder(GoogleAPIKey)
+		geocoder = google.Geocoder(googleAPIKey)
 	default:
 		return fmt.Errorf("unknown provider '%s'", provider)
 	}
